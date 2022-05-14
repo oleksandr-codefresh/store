@@ -1,14 +1,22 @@
+import { inject, InjectionToken } from '@angular/core';
 import { isPlatformServer } from '@angular/common';
 import { StateClass } from '@ngxs/store/internals';
 import { StateToken } from '@ngxs/store';
 
-import { StorageOption, StorageEngine, NgxsStoragePluginOptions } from './symbols';
+import {
+  StorageOption,
+  StorageEngine,
+  NgxsStoragePluginOptions,
+  NGXS_STORAGE_PLUGIN_OPTIONS
+} from './symbols';
 
-/**
- * If the `key` option is not provided then the below constant
- * will be used as a default key
- */
-export const DEFAULT_STATE_KEY = '@@STATE';
+export const DEFAULT_STATE_KEY = new InjectionToken<string>('DEFAULT_STATE_KEY', {
+  providedIn: 'root',
+  factory: () => {
+    const options = inject(NGXS_STORAGE_PLUGIN_OPTIONS);
+    return (options && options.namespace) || '@@STATE';
+  }
+});
 
 /**
  * Internal type definition for the `key` option provided
@@ -44,14 +52,15 @@ function transformKeyOption(key: StorageKey): string[] {
 }
 
 export function storageOptionsFactory(
-  options: NgxsStoragePluginOptions | undefined
+  options: NgxsStoragePluginOptions | undefined,
+  defaultStateKey: string
 ): NgxsStoragePluginOptions {
   if (options !== undefined && options.key) {
     options.key = transformKeyOption(options.key);
   }
 
   return {
-    key: [DEFAULT_STATE_KEY],
+    key: [defaultStateKey],
     storage: StorageOption.LocalStorage,
     serialize: JSON.stringify,
     deserialize: JSON.parse,
@@ -76,4 +85,18 @@ export function engineFactory(
   }
 
   return null;
+}
+
+export function getNamespacedKey(
+  isMaster: boolean,
+  key: string,
+  namespace: string | undefined
+): string {
+  if (isMaster) {
+    return key;
+  } else if (namespace) {
+    return `${namespace}:${key}`;
+  } else {
+    return key;
+  }
 }

@@ -17,7 +17,7 @@ import {
   STORAGE_ENGINE,
   NGXS_STORAGE_PLUGIN_OPTIONS
 } from './symbols';
-import { DEFAULT_STATE_KEY } from './internals';
+import { DEFAULT_STATE_KEY, getNamespacedKey } from './internals';
 
 /**
  * @description Will be provided through Terser global definitions by Angular CLI
@@ -30,7 +30,8 @@ export class NgxsStoragePlugin implements NgxsPlugin {
   constructor(
     @Inject(NGXS_STORAGE_PLUGIN_OPTIONS) private _options: NgxsStoragePluginOptions,
     @Inject(STORAGE_ENGINE) private _engine: StorageEngine,
-    @Inject(PLATFORM_ID) private _platformId: string
+    @Inject(PLATFORM_ID) private _platformId: string,
+    @Inject(DEFAULT_STATE_KEY) private _defaultStateKey: string
   ) {}
 
   handle(state: any, event: any, next: NgxsNextPluginFn) {
@@ -56,8 +57,10 @@ export class NgxsStoragePlugin implements NgxsPlugin {
           continue;
         }
 
-        const isMaster = key === DEFAULT_STATE_KEY;
-        let val: any = this._engine.getItem(key!);
+        const isMaster = key === this._defaultStateKey;
+        let val: any = this._engine.getItem(
+          getNamespacedKey(isMaster, key!, this._options.namespace)
+        );
 
         if (val !== 'undefined' && val != null) {
           try {
@@ -102,13 +105,16 @@ export class NgxsStoragePlugin implements NgxsPlugin {
           for (const key of keys) {
             let val = nextState;
 
-            if (key !== DEFAULT_STATE_KEY) {
+            if (key !== this._defaultStateKey) {
               val = getValue(nextState, key!);
             }
 
             try {
               const newVal = this._options.beforeSerialize!(val, key);
-              this._engine.setItem(key!, this._options.serialize!(newVal));
+              this._engine.setItem(
+                getNamespacedKey(false, key!, this._options.namespace),
+                this._options.serialize!(newVal)
+              );
             } catch (error) {
               // Caretaker note: we have still left the `typeof` condition in order to avoid
               // creating a breaking change for projects that still use the View Engine.

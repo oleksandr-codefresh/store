@@ -1,10 +1,15 @@
+import { Injectable } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 
 import { NgxsModule, State, Store, Action, StateContext } from '@ngxs/store';
 
-import { DEFAULT_STATE_KEY } from '../src/internals';
-import { NgxsStoragePluginModule, StorageOption, StorageEngine, STORAGE_ENGINE } from '../';
-import { Injectable } from '@angular/core';
+import {
+  NgxsStoragePluginModule,
+  StorageOption,
+  StorageEngine,
+  STORAGE_ENGINE,
+  NgxsStoragePluginOptions
+} from '../';
 
 describe('NgxsStoragePlugin', () => {
   class Increment {
@@ -44,6 +49,8 @@ describe('NgxsStoragePlugin', () => {
     defaults: { count: 0 }
   })
   class LazyLoadedState {}
+
+  const DEFAULT_STATE_KEY = '@@STATE';
 
   afterEach(() => {
     localStorage.removeItem(DEFAULT_STATE_KEY);
@@ -534,6 +541,48 @@ describe('NgxsStoragePlugin', () => {
       // Assert
       expect(state).toBeInstanceOf(CounterInfoStateModel);
       expect(state.count).toBe(100);
+    });
+
+    describe('namespace option', () => {
+      @State({
+        name: 'names',
+        defaults: []
+      })
+      @Injectable()
+      class NamesState {}
+
+      const testSetup = (options?: NgxsStoragePluginOptions) => {
+        TestBed.configureTestingModule({
+          imports: [
+            NgxsModule.forRoot([CounterState, NamesState]),
+            NgxsStoragePluginModule.forRoot(options)
+          ]
+        });
+
+        return { store: TestBed.inject(Store) };
+      };
+
+      it('providing namespace for the entire state (key option is not provided)', () => {
+        // Arrange & act
+        const namespace = 'navbar_app';
+        localStorage.setItem(namespace, JSON.stringify({ counter: { count: 100 } }));
+        const { store } = testSetup({ namespace });
+        const state: CounterStateModel = store.selectSnapshot(CounterState);
+        // Assert
+        expect(state.count).toBe(100);
+      });
+
+      it('providing namespace for the state slice (key option is provided)', () => {
+        // Arrange & act
+        const namespace = 'my_cool_app';
+        localStorage.setItem(`${namespace}:names`, JSON.stringify(['Mark', 'Artur', 'Max']));
+        const { store } = testSetup({ namespace, key: [NamesState] });
+        const names = store.selectSnapshot<string[]>(NamesState);
+        const { count } = store.selectSnapshot<CounterStateModel>(CounterState);
+        // Assert
+        expect(names).toEqual(['Mark', 'Artur', 'Max']);
+        expect(count).toEqual(0);
+      });
     });
   });
 });
