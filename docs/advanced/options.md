@@ -11,6 +11,7 @@ You can provide an `NgxsModuleOptions` object as the second argument of your `Ng
   - `strictContentSecurityPolicy` - Set this to `true` in order to enable support for pages where a Strict Content Security Policy has been enabled. This setting circumvent some optimisations that violate a strict CSP through the use of `new Function(...)`. (Default value is `false`)
 - `executionStrategy` - An advanced option that is used to gain specific control over the way that NGXS executes code that is considered to be inside the NGXS context (ie. within `@Action` handlers) and the context under which the NGXS behaviours are observed (outside the NGXS context). These observable behaviours are: `@Select(...)`, `store.select(...)`, `actions.subscribe(...)` or `store.dispatch(...).subscribe(...)`  
   Developers who prefer to manually control the change detection mechanism in their application may choose to use the `NoopNgxsExecutionStrategy` which does not interfere with zones and therefore relies on the external context to handle change detection (for example: `OnPush` or the Ivy rendering engine). Developers can also choose to implement their own strategy by providing an Angular service class that implements the `NgxsExecutionStrategy` interface. The default value of `null` will result in the default strategy being used. This default strategy runs NGXS operations outside Angular's zone but all observable behaviours of NGXS are run back inside Angular's zone. (The default value is `null`)
+- `warnOnUnhandledActions` - An option that determines if NGXS should log a warning into the console when some action has been dispatched, but there's no handler for this action, which likely means the action has been fired & forgotten (default value is `false`).
 
 ngxs.config.ts
 
@@ -30,7 +31,8 @@ export const ngxsConfig: NgxsModuleOptions = {
   },
   // Execution strategy overridden for illustrative purposes
   // (only do this if you know what you are doing)
-  executionStrategy: NoopNgxsExecutionStrategy
+  executionStrategy: NoopNgxsExecutionStrategy,
+  warnOnUnhandledActions: !environment.production
 };
 ```
 

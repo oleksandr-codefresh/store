@@ -46,3 +46,7 @@ export { NgxsExecutionStrategy } from './execution/symbols';
 export { ActionType, ActionOptions } from './actions/symbols';
 export { NoopNgxsExecutionStrategy } from './execution/noop-ngxs-execution-strategy';
 export { StateToken } from './state-token/state-token';
+export {
+  UnhandledActionsLogger,
+  ignoreActions
+} from './unhandled-actions-logger/unhandled-actions-logger';

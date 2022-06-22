@@ -69,6 +69,12 @@ export class NgxsConfig {
     injectContainerState: true, // TODO: default is true in v3, will change in v4
     suppressErrors: true // TODO: default is true in v3, will change in v4
   };
+  /**
+   * Determines if NGXS should log a warning into the console when some action has
+   * been dispatched, but there's no handler for this action, which likely means the
+   * action has been fired & forgotten.
+   */
+  warnOnUnhandledActions = false;
 
   constructor() {
     this.compatibility = {

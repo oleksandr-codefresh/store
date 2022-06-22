@@ -36,6 +36,7 @@ import { InternalDispatchedActionResults } from '../internal/dispatcher';
 import { StateContextFactory } from '../internal/state-context-factory';
 import { StoreValidators } from '../utils/store-validators';
 import { ensureStateClassIsInjectable } from '../ivy/ivy-enabled-in-dev-mode';
+import { UnhandledActionsLogger } from '../unhandled-actions-logger/unhandled-actions-logger';
 
 /**
  * State factory class
@@ -129,10 +130,8 @@ export class StateFactory implements OnDestroy {
   }
 
   ngOnDestroy(): void {
-    // I'm using non-null assertion here since `_actionsSubscrition` will
-    // be 100% defined. This is because `ngOnDestroy()` cannot be invoked
-    // on the `StateFactory` until its initialized :) An it's initialized
-    // for the first time along with the `NgxsRootModule`.
+    // This is being non-null asserted since `_actionsSubscrition` is
+    // initialized within the constructor.
     this._actionsSubscription!.unsubscribe();
   }
 
@@ -238,6 +237,8 @@ export class StateFactory implements OnDestroy {
     const type = getActionTypeFromInstance(action)!;
     const results = [];
 
+    let actionHasBeenHandled = false;
+
     for (const metadata of this.states) {
       const actionMetas = metadata.actions[type];
 
@@ -287,8 +288,21 @@ export class StateFactory implements OnDestroy {
           } catch (e) {
             results.push(throwError(e));
           }
+
+          actionHasBeenHandled = true;
         }
       }
+    }
+
+    // The `UnhandledActionsLogger` will function only during
+    // development and be tree-shaken in production mode.
+    if (
+      (typeof ngDevMode === 'undefined' || ngDevMode) &&
+      this._config.warnOnUnhandledActions &&
+      !actionHasBeenHandled
+    ) {
+      const unhandledActionsLogger = this._injector.get(UnhandledActionsLogger);
+      unhandledActionsLogger.warnIfNeeded(action);
     }
 
     if (!results.length) {
